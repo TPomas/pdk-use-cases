@@ -19,7 +19,7 @@
     "stdin": [
       "python train.py --git-url https://git@github.com:/tybritten/pdk-use-cases.git --git-ref main --sub-dir sentiment-analysis/experiment --config const.yaml --repo finbert-data --model finbert --project PDK"
     ],
-    "image": "vmtyler/pds:train_0.0.9",
+    "image": "vmtyler/pdk:train_0.0.9",
     "secrets": [
       {
         "name": "pipeline-secret",
