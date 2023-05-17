@@ -87,11 +87,16 @@ def parse_args():
 
 
 def clone_code(repo_url, ref, dir):
-    print(f"Cloning code from: {repo_url}@{ref} --> {dir}")
     if os.path.isdir(dir):
+        print(f"Directory {dir} already exists. Fetching latest code...")
         repo = git.Repo(dir)
-        repo.remotes.origin.fetch()
+        ret = repo.remotes.origin.fetch()
+        if ret[0].flags == 4:
+            print("No new code to fetch.")
+        else:
+            print("New code fetched.")
     else:
+        print(f"Cloning code from: {repo_url}@{ref} --> {dir}")
         repo = git.Repo.clone_from(repo_url, dir)
     repo.git.checkout(ref)
 
@@ -115,8 +120,8 @@ def read_config(conf_file):
 
 def setup_config(config_file, repo, pipeline, job_id, project):
     config = read_config(config_file)
-    config["data"]["pachyderm"]["host"] = os.getenv("PACHD_LB_SERVICE_HOST")
-    config["data"]["pachyderm"]["port"] = os.getenv("PACHD_LB_SERVICE_PORT")
+    config["data"]["pachyderm"]["host"] = os.getenv("PACHD_SERVICE_HOST")
+    config["data"]["pachyderm"]["port"] = os.getenv("PACHD_SERVICE_PORT")
     config["data"]["pachyderm"]["repo"] = repo
     config["data"]["pachyderm"]["branch"] = job_id
     config["data"]["pachyderm"]["token"] = os.getenv("PAC_TOKEN")

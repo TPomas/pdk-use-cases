@@ -16,9 +16,9 @@
       "/bin/sh"
     ],
     "stdin": [
-      "python deploy.py --deployment-name dogcat-deploy --cloud-model-bucket tyler-model-serving --cloud-model-host  gcp"
+      "python deploy_pach.py --deployment-name dogcat-deploy --service-account-name pach-deploy "
     ],
-    "image": "vmtyler/pdk:deploy_0.0.4",
+    "image": "vmtyler/pdk:deploy_0.0.6",
     "secrets": [
       {
         "name": "pipeline-secret",
@@ -41,5 +41,7 @@
         "env_var": "KSERVE_NAMESPACE"
       }
     ]
-  }
+  },
+  "pod_patch": "[{\"op\": \"add\",\"path\": \"/volumes/-\",\"value\": {\"name\": \"det-checkpoints\",\"hostpath\": {\"path\": \"/nvmefs1/determined/checkpoints\",\"type\": \"Directory\"}}}, {\"op\": \"add\",\"path\": \"/containers/0/volumeMounts/-\",\"value\": {\"mountPath\": \"/determined_shared_fs\",\"name\": \"det-checkpoints\"}}]"
+
 }

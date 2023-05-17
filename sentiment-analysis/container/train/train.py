@@ -87,11 +87,16 @@ def parse_args():
 
 
 def clone_code(repo_url, ref, dir):
-    print(f"Cloning code from: {repo_url}@{ref} --> {dir}")
     if os.path.isdir(dir):
+        print(f"Directory {dir} already exists. Fetching latest code...")
         repo = git.Repo(dir)
-        repo.remotes.origin.fetch()
+        ret = repo.remotes.origin.fetch()
+        if ret[0].flags == 4:
+            print("No new code to fetch.")
+        else:
+            print("New code fetched.")
     else:
+        print(f"Cloning code from: {repo_url}@{ref} --> {dir}")
         repo = git.Repo.clone_from(repo_url, dir)
     repo.git.checkout(ref)
 

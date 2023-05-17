@@ -146,32 +146,6 @@ model_snapshot={"name":"startup.cfg","modelCount":1,"models":{"%s":{"%s":{"defau
 
 # =====================================================================================
 
-
-def upload_model(model_name, files, cloud_provider, bucket_name):
-    print(f"Uploading model files to model repository to cloud provider {cloud_provider} in bucket {bucket_name}...")
-    if cloud_provider.lower() == 'gcp':
-        upload_model_to_gcs(model_name, files, bucket_name)
-    elif cloud_provider.lower() == 'aws':
-        upload_model_to_s3(model_name, files, bucket_name)
-    else:
-        raise Exception(f"Invalid cloud provider {cloud_provider} specified")
-
-
-def upload_model_to_s3(model_name, files, bucket_name):
-    import boto3
-    storage_client = boto3.client('s3')
-    for file in files:
-        if "config" in str(file):
-            folder = "config"
-        else:
-            folder = "model-store"
-
-        prefix = f'{model_name}/{folder}/'
-        storage_client.upload_file("./" + file, bucket_name, prefix+file)
-
-    print("Upload to S3 complete.")
-
-
 def save_to_pfs(model_name, files):
     for file in files:
         if "config" in str(file):
@@ -180,23 +154,8 @@ def save_to_pfs(model_name, files):
             folder = "model-store"
 
         prefix = f'{model_name}/{folder}/'
-        os.makedirs(prefix, exist_ok=True)
-        shutil.copyfile("./" + file, f"/pfs/out/{prefix}{file}")
-
-def upload_model_to_gcs(model_name, files, bucket_name):
-    storage_client = storage.Client()
-    
-    bucket = storage_client.get_bucket(bucket_name)
-
-    for file in files:
-        if "config" in str(file):
-            folder = "config"
-        else:
-            folder = "model-store"
-        blob = bucket.blob(model_name + "/" + folder + "/" + file)
-        blob.upload_from_filename("./" + file)
-
-    print("Upload to GCS complete.")
+        os.makedirs("/pfs/out/"+prefix, exist_ok=True)
+        shutil.copyfile(file, f"/pfs/out/{prefix}{file}")
 
 
 # =====================================================================================
