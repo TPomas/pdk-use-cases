@@ -7,6 +7,7 @@
     "pfs": {
       "name": "data",
       "repo": "brain-mri-data",
+      "project": "pipeline-brain-mri",
       "branch": "master",
       "glob": "/",
       "empty_files": true
@@ -17,9 +18,9 @@
       "/bin/sh"
     ],
     "stdin": [
-      "python train.py --git-url https://git@github.com:/tybritten/pdk-use-cases.git --git-ref main --sub-dir brain-mri/experiment --config const.yaml --repo brain-mri-data --model brain-mri --project PDK"
+      "python train.py --git-url https://git@github.com:/tybritten/pdk-use-cases.git --git-ref main --sub-dir brain-mri/experiment --config const.yaml --repo brain-mri-data --model brain-mri --project pipeline-brain-mri"
     ],
-    "image": "vmtyler/pdk:train_0.1.0",
+    "image": "vmtyler/pdk:train_0.1.1",
     "secrets": [
       {
         "name": "pipeline-secret",
@@ -42,4 +43,6 @@
         "env_var": "PAC_TOKEN"
       }
     ]
-  }}
+  },
+  "pod_patch": "[{\"op\": \"add\",\"path\": \"/volumes/-\",\"value\": {\"name\": \"det-checkpoints\",\"hostpath\": {\"path\": \"/nvmefs1/determined/checkpoints\",\"type\": \"Directory\"}}}, {\"op\": \"add\",\"path\": \"/containers/0/volumeMounts/-\",\"value\": {\"mountPath\": \"/determined_shared_fs\",\"name\": \"det-checkpoints\"}}]"
+}

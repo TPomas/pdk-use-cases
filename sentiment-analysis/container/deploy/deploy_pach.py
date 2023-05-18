@@ -106,7 +106,7 @@ def create_scriptmodule(det_master, det_user, det_pw, model_name, pach_id):
 def create_mar_file(model_name, model_version):
     print(f"Creating .mar file for model '{model_name}'...")
     os.system(
-        "torch-model-archiver --model-name %s --version %s --serialized-file ./scriptmodule.pt --handler ./dog_cat_handler.py --force"
+        "torch-model-archiver --model-name %s --version %s --serialized-file ./state_dict.pth --handler ./finbert_handler_grpc.py --force"
         % (model_name, model_version)
     )
     print(f"Created .mar file successfully.")
@@ -254,20 +254,18 @@ class ModelInfo:
 
 # =====================================================================================
 
-
 def main():
     args = parse_args()
     det = DeterminedInfo()
     ksrv = KServeInfo()
     model = ModelInfo("/pfs/data/model-info.yaml")
 
-
     print(f"Starting pipeline: deploy-name='{args.deployment_name}', model='{model.name}', version='{model.version}'")
 
-    # Pull Determined.AI Checkpoint, load it, and create ScriptModule (TorchScript)
-    create_scriptmodule(det.master, det.username, det.password, model.name, model.version)
+    # Pull Determined.AI Checkpoint, load it, and create State_Dict from det checkpoint
+    create_state_dict(det.master, det.username, det.password, model.name, model.version)
 
-    # Create .mar file from ScriptModule
+    # Create .mar file from State_Dict and handler
     create_mar_file(model.name, model.version)
 
     # Create config.properties for .mar file, return files to upload to GCS bucket
@@ -294,7 +292,6 @@ def main():
    #wait_for_deployment(kclient, ksrv.namespace, args.deployment_name, model.name)
 
     print(f"Ending pipeline: deploy-name='{args.deployment_name}', model='{model.name}', version='{model.version}'")
-
 
 # =====================================================================================
 
