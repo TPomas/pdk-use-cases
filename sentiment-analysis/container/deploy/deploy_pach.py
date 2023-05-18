@@ -1,6 +1,6 @@
 import argparse
 import os
-import random
+import shutil
 import time
 
 import torch
@@ -8,26 +8,26 @@ import yaml
 from determined.common.experimental import ModelVersion
 from determined.experimental import Determined
 from determined.pytorch import load_trial_from_checkpoint_path
-from google.cloud import storage
-from kserve import (
-    KServeClient,
-    V1beta1InferenceService,
-    V1beta1InferenceServiceSpec,
-    V1beta1PredictorSpec,
-    V1beta1TorchServeSpec,
-    constants,
-    utils,
-)
+from kserve import (KServeClient, V1beta1InferenceService,
+                    V1beta1InferenceServiceSpec, V1beta1PredictorSpec,
+                    V1beta1TorchServeSpec, constants)
 from kubernetes import client
-
 
 # =====================================================================================
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Deploy a model to KServe")
-    parser.add_argument("--deployment-name", type=str, help="Name of the resulting KServe InferenceService")
-    parser.add_argument("--service-account-name", type=str, help="Service Account Name for Pachyderm Access")
+    parser.add_argument(
+        "--deployment-name",
+        type=str,
+        help="Name of the resulting KServe InferenceService",
+    )
+    parser.add_argument(
+        "--service-account-name",
+        type=str,
+        help="Service Account Name for Pachyderm Access",
+    )
     return parser.parse_args()
 
 
@@ -35,10 +35,16 @@ def parse_args():
 
 
 def wait_for_deployment(KServe, k8s_namespace, deployment_name, model_name):
-    while KServe.is_isvc_ready(deployment_name, namespace=k8s_namespace) == False:
-        print(f"Inference Service '{deployment_name}' is NOT READY. Waiting...")
+    while (
+        KServe.is_isvc_ready(deployment_name, namespace=k8s_namespace) == False
+    ):
+        print(
+            f"Inference Service '{deployment_name}' is NOT READY. Waiting..."
+        )
         time.sleep(5)
-    print(f"Inference Service '{deployment_name}' in Namespace '{k8s_namespace}' is READY.")
+    print(
+        f"Inference Service '{deployment_name}' in Namespace '{k8s_namespace}' is READY."
+    )
     response = KServe.get(deployment_name, namespace=k8s_namespace)
     print(
         "Model "
@@ -55,20 +61,22 @@ def wait_for_deployment(KServe, k8s_namespace, deployment_name, model_name):
 
 
 def get_version(client, model_name, model_version) -> ModelVersion:
-
     for version in client.get_model(model_name).get_versions():
         if version.name == model_version:
             return version
 
-    raise AssertionError(f"Version '{model_version}' not found inside model '{model_name}'")
+    raise AssertionError(
+        f"Version '{model_version}' not found inside model '{model_name}'"
+    )
 
 
 # =====================================================================================
 
 
-def create_scriptmodule(det_master, det_user, det_pw, model_name, pach_id):
-
-    print(f"Loading model version '{model_name}/{pach_id}' from master at '{det_master}...'")
+def create_state_dict(det_master, det_user, det_pw, model_name, pach_id):
+    print(
+        f"Loading model version '{model_name}/{pach_id}' from master at '{det_master}...'"
+    )
 
     if os.environ["HOME"] == "/":
         os.environ["HOME"] = "/app"
@@ -80,19 +88,22 @@ def create_scriptmodule(det_master, det_user, det_pw, model_name, pach_id):
     version = get_version(client, model_name, pach_id)
     checkpoint = version.checkpoint
     checkpoint_dir = checkpoint.download()
-    trial = load_trial_from_checkpoint_path(checkpoint_dir, map_location=torch.device("cpu"))
+    trial = load_trial_from_checkpoint_path(
+        checkpoint_dir, map_location=torch.device("cpu")
+    )
     end = time.time()
     delta = end - start
     print(f"Checkpoint loaded in {delta} seconds.")
 
-    print(f"Creating ScriptModule from Determined checkpoint...")
+    print(f"Creating state_dict from Determined checkpoint...")
 
-    # Create ScriptModule
-    m = torch.jit.script(trial.model)
+    # Define Model
+    model = trial.model
 
-    # Save ScriptModule to file
-    torch.jit.save(m, "scriptmodule.pt")
-    print(f"ScriptModule created successfully.")
+    # Save model state_dict
+    torch.save(model.state_dict(), "./state_dict.pth")
+
+    print(f"state_dict created successfully.")
 
 
 # =====================================================================================
@@ -141,6 +152,7 @@ model_snapshot={"name":"startup.cfg","modelCount":1,"models":{"%s":{"%s":{"defau
 
 # =====================================================================================
 
+
 def save_to_pfs(model_name, files):
     for file in files:
         if "config" in str(file):
@@ -148,15 +160,23 @@ def save_to_pfs(model_name, files):
         else:
             folder = "model-store"
 
-        prefix = f'{model_name}/{folder}/'
-        os.makedirs("/pfs/out/"+prefix, exist_ok=True)
+        prefix = f"{model_name}/{folder}/"
+        os.makedirs("/pfs/out/" + prefix, exist_ok=True)
         shutil.copyfile(file, f"/pfs/out/{prefix}{file}")
 
 
 # =====================================================================================
 
 
-def create_inference_service(kclient, k8s_namespace, model_name, deployment_name, pach_id, replace: bool, sa):
+def create_inference_service(
+    kclient,
+    k8s_namespace,
+    model_name,
+    deployment_name,
+    pach_id,
+    replace: bool,
+    sa,
+):
     repo = os.environ["PPS_PIPELINE_NAME"]
     project = os.environ["PPS_PROJECT_NAME"]
     commit = os.environ["PACH_JOB_ID"]
@@ -169,11 +189,19 @@ def create_inference_service(kclient, k8s_namespace, model_name, deployment_name
         metadata=client.V1ObjectMeta(
             name=deployment_name,
             namespace=k8s_namespace,
-            annotations={"sidecar.istio.io/inject": "false", "pach_id": pach_id},
+            annotations={
+                "sidecar.istio.io/inject": "false",
+                "pach_id": pach_id,
+            },
         ),
         spec=V1beta1InferenceServiceSpec(
             predictor=V1beta1PredictorSpec(
-                pytorch=(V1beta1TorchServeSpec(storage_uri=f"s3://{commit}.master.{repo}.{project}/{model_name}")), service_account_name=sa
+                pytorch=(
+                    V1beta1TorchServeSpec(
+                        storage_uri=f"s3://{commit}.master.{repo}.{project}/{model_name}"
+                    )
+                ),
+                service_account_name=sa,
             )
         ),
     )
@@ -192,16 +220,21 @@ def create_inference_service(kclient, k8s_namespace, model_name, deployment_name
 
 
 def check_existence(kclient, deployment_name, k8s_namespace):
-
-    print(f"Checking if previous version of InferenceService '{deployment_name}' exists...")
+    print(
+        f"Checking if previous version of InferenceService '{deployment_name}' exists..."
+    )
 
     try:
         response = kclient.get(deployment_name, namespace=k8s_namespace)
         exists = True
-        print(f"Previous version of InferenceService '{deployment_name}' exists.")
-    except (RuntimeError):
+        print(
+            f"Previous version of InferenceService '{deployment_name}' exists."
+        )
+    except RuntimeError:
         exists = False
-        print(f"Previous version of InferenceService '{deployment_name}' does not exist.")
+        print(
+            f"Previous version of InferenceService '{deployment_name}' does not exist."
+        )
 
     return exists
 
@@ -249,16 +282,21 @@ class ModelInfo:
 
 # =====================================================================================
 
+
 def main():
     args = parse_args()
     det = DeterminedInfo()
     ksrv = KServeInfo()
     model = ModelInfo("/pfs/data/model-info.yaml")
 
-    print(f"Starting pipeline: deploy-name='{args.deployment_name}', model='{model.name}', version='{model.version}'")
+    print(
+        f"Starting pipeline: deploy-name='{args.deployment_name}', model='{model.name}', version='{model.version}'"
+    )
 
     # Pull Determined.AI Checkpoint, load it, and create State_Dict from det checkpoint
-    create_state_dict(det.master, det.username, det.password, model.name, model.version)
+    create_state_dict(
+        det.master, det.username, det.password, model.name, model.version
+    )
 
     # Create .mar file from State_Dict and handler
     create_mar_file(model.name, model.version)
@@ -272,7 +310,7 @@ def main():
     # Instantiate KServe Client using kubeconfig
     k8s_config_file = "/determined_shared_fs/k8s.config"
     if os.path.exists(k8s_config_file):
-        print ('k8s_config_file exists')
+        print("k8s_config_file exists")
         kclient = KServeClient(config_file=k8s_config_file)
     else:
         kclient = KServeClient()
@@ -281,12 +319,23 @@ def main():
     replace = check_existence(kclient, args.deployment_name, ksrv.namespace)
 
     # Create or replace inference service
-    create_inference_service(kclient, ksrv.namespace, model.name, args.deployment_name, model.version, replace, args.service_account_name)
+    create_inference_service(
+        kclient,
+        ksrv.namespace,
+        model.name,
+        args.deployment_name,
+        model.version,
+        replace,
+        args.service_account_name,
+    )
 
     # Wait for InferenceService to be ready for predictions
-   #wait_for_deployment(kclient, ksrv.namespace, args.deployment_name, model.name)
+    # wait_for_deployment(kclient, ksrv.namespace, args.deployment_name, model.name)
 
-    print(f"Ending pipeline: deploy-name='{args.deployment_name}', model='{model.name}', version='{model.version}'")
+    print(
+        f"Ending pipeline: deploy-name='{args.deployment_name}', model='{model.name}', version='{model.version}'"
+    )
+
 
 # =====================================================================================
 
