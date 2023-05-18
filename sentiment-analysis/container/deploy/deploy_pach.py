@@ -2,11 +2,8 @@ import argparse
 import os
 import random
 import time
-import shutil
 
-import numpy as np
 import torch
-import torch.optim as optim
 import yaml
 from determined.common.experimental import ModelVersion
 from determined.experimental import Determined
@@ -22,9 +19,7 @@ from kserve import (
     utils,
 )
 from kubernetes import client
-from torch import nn
-from torch.utils.data import DataLoader, Dataset
-from torchvision import models, transforms
+
 
 # =====================================================================================
 
