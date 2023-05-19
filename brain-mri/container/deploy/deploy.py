@@ -151,7 +151,7 @@ def main():
 
     if args.k8s_config_file:
         print(f"Using Configured K8s Config File at {args.k8s_config_file}")
-        kclient = KServeClient(config_file=args.k8s_config_fil)
+        kclient = KServeClient(config_file=args.k8s_config_file)
     else:
         kclient = KServeClient()
 
