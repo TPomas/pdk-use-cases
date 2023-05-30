@@ -171,8 +171,11 @@ def main():
         args.deployment_name,
         model.version,
         replace,
+        args.cloud_model_host,
+        args.cloud_model_bucket,
         args.tolerations,
-        resource_requirements
+        resource_requirements,
+        args.service_account_name
     )
     if args.wait and args.cloud_model_host:
         # Wait for InferenceService to be ready for predictions

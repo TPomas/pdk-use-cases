@@ -1,6 +1,8 @@
+import argparse
 import os
 import shutil
 import time
+from functools import partial
 
 import yaml
 from determined.common.experimental import ModelVersion
@@ -14,12 +16,10 @@ from kserve import (
 )
 from kubernetes import client
 from kubernetes.client import V1ResourceRequirements, V1Toleration
-from functools import partial
-import argparse
 
 # =====================================================================================
 
-csv_ = partial(str.split, sep=',')
+csv_ = partial(str.split, sep=",")
 
 
 def parse_args():
@@ -198,9 +198,15 @@ def create_inference_service(
     deployment_name,
     pach_id,
     replace: bool,
+    cloud_provider=None,
+    bucket_name=None,
     tolerations=None,
     resource_requirements={"requests": {}, "limits": {}},
+    sa=None,
 ):
+    repo = os.environ["PPS_PIPELINE_NAME"]
+    project = os.environ["PPS_PROJECT_NAME"]
+    commit = os.environ["PACH_JOB_ID"]
     kserve_version = "v1beta1"
     api_version = constants.KSERVE_GROUP + "/" + kserve_version
     tol = []
@@ -215,6 +221,55 @@ def create_inference_service(
                     operator="Equal",
                 )
             )
+    if cloud_provider == "gcp":
+        predictor_spec = V1beta1PredictorSpec(
+            tolerations=tol,
+            pytorch=(
+                V1beta1TorchServeSpec(
+                    protocol_version="v2",
+                    storage_uri=f"gs://{bucket_name}/{model_name}",
+                    resources=(
+                        V1ResourceRequirements(
+                            requests=resource_requirements["requests"],
+                            limits=resource_requirements["limits"],
+                        )
+                    ),
+                )
+            ),
+        )
+    elif cloud_provider == "aws":
+        predictor_spec = V1beta1PredictorSpec(
+            tolerations=tol,
+            pytorch=(
+                V1beta1TorchServeSpec(
+                    protocol_version="v2",
+                    storage_uri=f"s3://{bucket_name}/{model_name}",
+                    resources=(
+                        V1ResourceRequirements(
+                            requests=resource_requirements["requests"],
+                            limits=resource_requirements["limits"],
+                        )
+                    ),
+                )
+            ),
+        )
+    else:
+        predictor_spec = V1beta1PredictorSpec(
+            tolerations=tol,
+            pytorch=(
+                V1beta1TorchServeSpec(
+                    protocol_version="v2",
+                    storage_uri=f"s3://{commit}.master.{repo}.{project}/{model_name}",
+                    resources=(
+                        V1ResourceRequirements(
+                            requests=resource_requirements["requests"],
+                            limits=resource_requirements["limits"],
+                        )
+                    ),
+                )
+            ),
+            service_account_name=sa,
+        )
     isvc = V1beta1InferenceService(
         api_version=api_version,
         kind=constants.KSERVE_KIND,
@@ -226,22 +281,7 @@ def create_inference_service(
                 "pach_id": pach_id,
             },
         ),
-        spec=V1beta1InferenceServiceSpec(
-            predictor=V1beta1PredictorSpec(
-                tolerations=tol,
-                pytorch=(
-                    V1beta1TorchServeSpec(
-                        storage_uri=f"gs://kserve-models/{model_name}",
-                        resources=(
-                            V1ResourceRequirements(
-                                requests=resource_requirements["requests"],
-                                limits=resource_requirements["limits"],
-                            )
-                        ),
-                    )
-                ),
-            )
-        ),
+        spec=V1beta1InferenceServiceSpec(predictor=predictor_spec),
     )
     print(isvc)
     if replace:
