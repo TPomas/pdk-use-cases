@@ -16,9 +16,9 @@
       "/bin/sh"
     ],
     "stdin": [
-      "python deploy_pach.py --deployment-name finbert-deploy --service-account-name pach-deploy"
+      "python deploy.py --deployment-name finbert-deploy --service-account-name pach-deploy"
     ],
-    "image": "vmtyler/pdk:deploy_finbert_0.0.3",
+    "image": "vmtyler/pdk:deploy_finbert_0.0.4",
     "secrets": [
       {
         "name": "pipeline-secret",

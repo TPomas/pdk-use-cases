@@ -283,7 +283,7 @@ def create_inference_service(
         ),
         spec=V1beta1InferenceServiceSpec(predictor=predictor_spec),
     )
-
+    print(isvc)
     if replace:
         print("Replacing InferenceService with new version...")
         kclient.replace(deployment_name, isvc)

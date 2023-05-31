@@ -7,7 +7,6 @@
     "pfs": {
       "name": "data",
       "repo": "brain-mri-data",
-      "project": "pipeline-brain-mri",
       "branch": "master",
       "glob": "/",
       "empty_files": true

@@ -8,7 +8,6 @@
       "name": "data",
       "repo": "finbert-data",
       "branch": "master",
-      "project": "pipeline-finbert",
       "glob": "/"
     }
   },
