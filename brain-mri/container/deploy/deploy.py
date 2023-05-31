@@ -1,29 +1,12 @@
-import argparse
 import os
-import random
 import time
 
-import numpy as np
 import torch
-import torch.optim as optim
-import yaml
 from determined.common.experimental import ModelVersion
 from determined.experimental import Determined
 from determined.pytorch import load_trial_from_checkpoint_path
 from google.cloud import storage
-from kserve import (
-    KServeClient,
-    V1beta1InferenceService,
-    V1beta1InferenceServiceSpec,
-    V1beta1PredictorSpec,
-    V1beta1TorchServeSpec,
-    constants,
-    utils,
-)
-from kubernetes import client
-from torch import nn
-from torch.utils.data import DataLoader, Dataset
-from torchvision import models, transforms
+from kserve import KServeClient
 
 from common import (
     upload_model,
