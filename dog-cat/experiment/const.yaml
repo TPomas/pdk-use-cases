@@ -1,6 +1,6 @@
 name: Pipeline-Run-DogCat-1GPU
 workspace: Tanguy
-project: PDK Tests
+project: "PDK Tests"
 data:
     pachyderm:
         host:
